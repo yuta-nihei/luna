@@ -1,5 +1,8 @@
 import { create } from "zustand";
 import { basename } from "@/core/path";
+import { loadWorkspaceSession, saveWorkspaceSession } from "./workspacePersist";
+
+const session = loadWorkspaceSession();
 
 /** One open file in the editor. `content` tracks in-editor edits; `dirty` is
  * true while those edits are unsaved. */
@@ -21,6 +24,8 @@ interface WorkspaceState {
   setActive: (path: string) => void;
   /** Sync in-editor edits into the open tab and mark it unsaved. */
   updateContent: (path: string, content: string) => void;
+  /** Persist editor content to the tab store and clear the dirty flag after save. */
+  saveTabContent: (path: string, content: string) => void;
   /** Clear the unsaved flag after a successful save. */
   markSaved: (path: string) => void;
   reorderTabs: (fromPath: string, toPath: string) => void;
@@ -34,10 +39,17 @@ interface WorkspaceState {
   renamePath: (oldPath: string, newPath: string) => void;
 }
 
+/** Keep activePath aligned with open tabs so the editor never loses its target. */
+function resolveActivePath(tabs: Tab[], activePath: string | null): string | null {
+  if (tabs.length === 0) return null;
+  if (activePath && tabs.some((t) => t.path === activePath)) return activePath;
+  return tabs[tabs.length - 1]!.path;
+}
+
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
-  rootPath: null,
-  tabs: [],
-  activePath: null,
+  rootPath: session?.rootPath ?? null,
+  tabs: session?.tabs ?? [],
+  activePath: session ? resolveActivePath(session.tabs, session.activePath) : null,
 
   setRoot: (path) => set({ rootPath: path }),
 
@@ -54,14 +66,23 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     }),
 
   updateContent: (path, content) =>
-    set((s) => ({
-      tabs: s.tabs.map((t) => (t.path === path ? { ...t, content, dirty: true } : t)),
-    })),
+    set((s) => {
+      const tabs = s.tabs.map((t) => (t.path === path ? { ...t, content, dirty: true } : t));
+      return { tabs, activePath: resolveActivePath(tabs, s.activePath) };
+    }),
+
+  saveTabContent: (path, content) =>
+    set((s) => {
+      const tabs = s.tabs.map((t) => (t.path === path ? { ...t, content, dirty: false } : t));
+      const activePath = resolveActivePath(tabs, s.activePath);
+      return { tabs, activePath };
+    }),
 
   markSaved: (path) =>
-    set((s) => ({
-      tabs: s.tabs.map((t) => (t.path === path ? { ...t, dirty: false } : t)),
-    })),
+    set((s) => {
+      const tabs = s.tabs.map((t) => (t.path === path ? { ...t, dirty: false } : t));
+      return { tabs, activePath: resolveActivePath(tabs, s.activePath) };
+    }),
 
   closeTab: (path) =>
     set((s) => {
@@ -133,3 +154,11 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       };
     }),
 }));
+
+useWorkspaceStore.subscribe((state) => {
+  saveWorkspaceSession({
+    rootPath: state.rootPath,
+    tabs: state.tabs,
+    activePath: state.activePath,
+  });
+});

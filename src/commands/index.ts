@@ -1,6 +1,28 @@
 import { confirm, message } from "@tauri-apps/plugin-dialog";
 import type { PaletteItem } from "@/types";
 import { basename, dirname, join } from "@/core/path";
+import {
+  balanceInward,
+  balanceOutward,
+  decrementNumber1,
+  decrementNumber01,
+  decrementNumber10,
+  enterAbbreviationMode,
+  evaluateMath,
+  expandAbbreviation,
+  goToNextEditPoint,
+  goToPreviousEditPoint,
+  goToTagPair,
+  incrementNumber1,
+  incrementNumber01,
+  incrementNumber10,
+  removeTag,
+  selectNextItem,
+  selectPreviousItem,
+  splitJoinTag,
+  toggleComment,
+} from "@/editor/emmet";
+import { readActiveEditorContent, runEditorCommand } from "@/editor/editorBridge";
 import { fsService } from "@/services/fsService";
 import { commandService } from "@/services/commandService";
 import { urlService } from "@/services/urlService";
@@ -62,9 +84,10 @@ commands.register({
     const ws = useWorkspaceStore.getState();
     const tab = ws.tabs.find((t) => t.path === ws.activePath);
     if (!tab) return;
+    const content = readActiveEditorContent() ?? tab.content;
     try {
-      await fsService.writeFile(tab.path, tab.content);
-      ws.markSaved(tab.path);
+      await fsService.writeFile(tab.path, content);
+      ws.saveTabContent(tab.path, content);
     } catch (e) {
       // Surface the failure — a silent save is worse than a noisy one.
       console.error(e);
@@ -317,3 +340,35 @@ commands.register({
   title: "Toggle File Tree",
   run: () => useUiStore.getState().toggleFileTree(),
 });
+
+// --- Emmet ------------------------------------------------------------------
+
+function emmetCmd(id: string, title: string, cmd: Parameters<typeof runEditorCommand>[0]): void {
+  commands.register({
+    id,
+    title,
+    run: () => {
+      runEditorCommand(cmd);
+    },
+  });
+}
+
+emmetCmd("emmet.expandAbbreviation", "Emmet: Expand Abbreviation", expandAbbreviation);
+emmetCmd("emmet.enterAbbreviationMode", "Emmet: Enter Abbreviation Mode", enterAbbreviationMode);
+emmetCmd("emmet.balanceOutward", "Emmet: Balance Outward", balanceOutward);
+emmetCmd("emmet.balanceInward", "Emmet: Balance Inward", balanceInward);
+emmetCmd("emmet.toggleComment", "Emmet: Toggle Comment", toggleComment);
+emmetCmd("emmet.evaluateMath", "Emmet: Evaluate Math", evaluateMath);
+emmetCmd("emmet.goToNextEditPoint", "Emmet: Go to Next Edit Point", goToNextEditPoint);
+emmetCmd("emmet.goToPreviousEditPoint", "Emmet: Go to Previous Edit Point", goToPreviousEditPoint);
+emmetCmd("emmet.goToTagPair", "Emmet: Go to Matching Pair", goToTagPair);
+emmetCmd("emmet.removeTag", "Emmet: Remove Tag", removeTag);
+emmetCmd("emmet.splitJoinTag", "Emmet: Split/Join Tag", splitJoinTag);
+emmetCmd("emmet.selectNextItem", "Emmet: Select Next Item", selectNextItem);
+emmetCmd("emmet.selectPreviousItem", "Emmet: Select Previous Item", selectPreviousItem);
+emmetCmd("emmet.incrementNumber", "Emmet: Increment Number", incrementNumber1);
+emmetCmd("emmet.decrementNumber", "Emmet: Decrement Number", decrementNumber1);
+emmetCmd("emmet.incrementNumber01", "Emmet: Increment Number by 0.1", incrementNumber01);
+emmetCmd("emmet.decrementNumber01", "Emmet: Decrement Number by 0.1", decrementNumber01);
+emmetCmd("emmet.incrementNumber10", "Emmet: Increment Number by 10", incrementNumber10);
+emmetCmd("emmet.decrementNumber10", "Emmet: Decrement Number by 10", decrementNumber10);

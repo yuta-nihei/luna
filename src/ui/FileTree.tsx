@@ -9,6 +9,7 @@ import {
   FilePlus,
   FileText,
   Folder,
+  FolderOpen,
   FolderPlus,
   RefreshCw,
 } from "lucide-react";
@@ -197,9 +198,24 @@ export function FileTree(): JSX.Element {
     return (
       <aside className="file-tree">
         <div className="panel-header">Explorer</div>
-        <button type="button" className="tree-open-btn" onClick={() => void commands.execute("file.openFolder")}>
-          Open Folder…
-        </button>
+        <div className="tree-welcome">
+          <span className="tree-welcome-icon" aria-hidden="true">
+            <Folder size={28} strokeWidth={1.25} />
+          </span>
+          <p className="tree-welcome-title">フォルダーが開かれていません</p>
+          <p className="tree-welcome-desc">プロジェクトフォルダーを選ぶと、ここにファイル一覧が表示されます。</p>
+          <button
+            type="button"
+            className="btn btn--primary tree-welcome-btn"
+            onClick={() => void commands.execute("file.openFolder")}
+          >
+            <FolderOpen size={15} strokeWidth={1.75} />
+            フォルダーを開く
+          </button>
+          <span className="tree-welcome-hint">
+            <kbd>Ctrl</kbd>+<kbd>O</kbd>
+          </span>
+        </div>
       </aside>
     );
   }

@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { commands } from "@/commands";
 import { usePaletteStore } from "@/store/paletteStore";
 import { useUiStore } from "@/store/uiStore";
@@ -19,6 +21,24 @@ export function AppShell(): JSX.Element {
   useEffect(() => {
     void loadPalette();
   }, [loadPalette]);
+
+  // After a dev-server reload, keep focus on the Luna window (not a stray browser).
+  useEffect(() => {
+    void getCurrentWebviewWindow().setFocus();
+  }, []);
+
+  // macOS menu bar Save (Cmd+S) is wired in Rust and emitted here.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void listen("luna:save", () => {
+      void commands.execute("file.save");
+    }).then((fn) => {
+      unlisten = fn;
+    });
+    return () => {
+      unlisten?.();
+    };
+  }, []);
 
   // Keyboard-first: global shortcuts route through the command registry.
   useEffect(() => {
@@ -51,8 +71,8 @@ export function AppShell(): JSX.Element {
         void commands.execute("tab.select", Number(key) - 1);
       }
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => window.removeEventListener("keydown", onKey, { capture: true });
   }, []);
 
   return (

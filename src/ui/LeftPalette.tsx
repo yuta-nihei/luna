@@ -25,7 +25,7 @@ export function LeftPalette(): JSX.Element {
       <button
         type="button"
         className="palette-btn palette-btn--folder"
-        title="Open Folder (Ctrl+O)"
+        title="フォルダーを開く (Ctrl+O)"
         onClick={() => void commands.execute("file.openFolder")}
       >
         <FolderOpen size={20} strokeWidth={1.75} />

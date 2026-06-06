@@ -50,6 +50,13 @@ docs/        設計ドキュメント
 | Rust + Cargo | stable | Tauri シェルのビルド |
 | make | 任意 | サイドカービルドの補助（無くても可、下記参照） |
 
+### Go のインストール（macOS）
+
+```sh
+brew install go
+go version   # go1.22 以上であること
+```
+
 ### Linux のシステム依存（Tauri 2）
 
 Tauri デスクトップをビルド/実行するには WebKitGTK 等が必要（Debian/Ubuntu 系）:
@@ -91,10 +98,19 @@ pnpm tauri dev
 
 1. 起動すると Luna のウェルカム画面（ショートカット一覧）が表示される。
 2. **Ctrl+O** または左パレット上部のフォルダボタンでフォルダを開く → 左にファイルツリー。
-3. ツリーのファイルをクリック → タブが開き CodeMirror で内容表示（読み取り専用）。
+3. ツリーのファイルをクリック → タブが開き CodeMirror で内容表示・編集。
 4. 左パレットのボタン（`Echo Hello` / `Git Status` / `List Files`）をクリック →
    下部ターミナルにコマンド出力。
-   - **Ctrl+B** ファイルツリー開閉 / **Ctrl+`** ターミナル開閉。
+   - **Ctrl+B** ファイルツリー開閉 / **Ctrl+`** ターミナル開閉 / **Ctrl+S** 保存。
+
+### Emmet（HTML / CSS / JSX）
+
+対応ファイル（`.html` / `.css` / `.js` / `.jsx` / `.tsx`）で Emmet 略語が使える。
+
+1. `.html` を開き `div.container>ul>li*3` と入力 → **Tab** で展開。
+2. 展開できない位置では **Tab** が通常のインデントになる。
+3. **Ctrl+E**（macOS は **Cmd+E**）で abbreviation mode、**Ctrl+Shift+A** で Wrap、
+   **Ctrl+Shift+T** でタグペア移動、**Ctrl+/** で Toggle Comment。
 
 ---
 
@@ -102,9 +118,10 @@ pnpm tauri dev
 
 **含む:** Tauri+React+Go の足場、Go サイドカー（`fs.listDir` / `fs.readFile` /
 `palette.load` / `command.run`）、Rust ブリッジ、左パレット、ファイルツリー、
-タブ、CodeMirror エディタ（読み取り専用）、ワンショットコマンド出力、Luna Dark テーマ。
+タブ、CodeMirror エディタ（編集・保存）、Emmet 略語展開と主要アクション、
+ワンショットコマンド出力、Luna Dark テーマ。
 
-**含まない（次スライス）:** ファイル編集・保存、コマンドパレット (Ctrl+Shift+P)、
+**含まない（次スライス）:** コマンドパレット (Ctrl+Shift+P)、
 ripgrep 検索、Git 統合、インタラクティブ PTY ターミナル、Luna Light テーマ、設定 UI、
 セッション復元、Basket、AI、セキュアストレージ。各機能は確立済みの縦軸
 （新 Go メソッド + サービス + コマンド + UI）に沿って追加する。

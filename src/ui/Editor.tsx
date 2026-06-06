@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { FolderOpen } from "lucide-react";
 import { EditorState } from "@codemirror/state";
 import {
   EditorView,
@@ -8,16 +9,28 @@ import {
   keymap,
   lineNumbers,
 } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { bracketMatching } from "@codemirror/language";
 import { lunaDark } from "@/themes/lunaDark";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import { commands } from "@/commands";
+import { emmetExtensions } from "@/editor/emmet";
+import {
+  registerEditorContentGetter,
+  registerEditorView,
+  unregisterEditorContentGetter,
+  unregisterEditorView,
+} from "@/editor/editorBridge";
 import { languageExtension } from "./editor-lang";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 
 // Builds editor state for one file. `onDocChange` fires on every edit so the
 // open tab's content + dirty flag stay in sync with what's on screen.
+function saveCommand(): boolean {
+  void commands.execute("file.save");
+  return true;
+}
+
 function buildState(
   content: string,
   language: string,
@@ -32,34 +45,43 @@ function buildState(
       drawSelection(),
       bracketMatching(),
       history(),
-      keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
+      keymap.of([
+        { key: "Mod-s", run: saveCommand },
+        ...defaultKeymap,
+        ...historyKeymap,
+      ]),
       EditorView.updateListener.of((u) => {
         if (u.docChanged) onDocChange(u.state.doc.toString());
       }),
       EditorView.lineWrapping,
       lunaDark,
       ...languageExtension(language),
+      ...emmetExtensions(language),
     ],
   });
 }
 
 export function Editor(): JSX.Element {
   const tabs = useWorkspaceStore((s) => s.tabs);
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
   const activePath = useWorkspaceStore((s) => s.activePath);
+  const activeTab = useWorkspaceStore((s) =>
+    s.activePath ? s.tabs.find((t) => t.path === s.activePath) ?? null : null,
+  );
   const setActive = useWorkspaceStore((s) => s.setActive);
   const reorderTabs = useWorkspaceStore((s) => s.reorderTabs);
 
   const hostRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const suppressDocSync = useRef(false);
   const dragPath = useRef<string | null>(null);
   const [overPath, setOverPath] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; path: string } | null>(null);
 
-  const active = tabs.find((tab) => tab.path === activePath) ?? null;
-
   // Stable across renders: routes editor edits to the currently active tab,
   // reading the latest active path at call time so buildState needn't capture it.
   const handleDocChange = useRef((content: string) => {
+    if (suppressDocSync.current) return;
     const path = useWorkspaceStore.getState().activePath;
     if (path) useWorkspaceStore.getState().updateContent(path, content);
   }).current;
@@ -72,7 +94,14 @@ export function Editor(): JSX.Element {
       state: buildState("", "", handleDocChange),
     });
     viewRef.current = view;
+    registerEditorContentGetter(() => {
+      const current = viewRef.current;
+      return current ? current.state.doc.toString() : null;
+    });
+    registerEditorView(view);
     return () => {
+      unregisterEditorContentGetter();
+      unregisterEditorView();
       view.destroy();
       viewRef.current = null;
     };
@@ -85,9 +114,20 @@ export function Editor(): JSX.Element {
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    const tab = useWorkspaceStore.getState().tabs.find((t) => t.path === active?.path) ?? null;
-    view.setState(buildState(tab?.content ?? "", tab?.language ?? "", handleDocChange));
-  }, [active?.path, active?.language, handleDocChange]);
+    const storeTabs = useWorkspaceStore.getState().tabs;
+    suppressDocSync.current = true;
+    try {
+      if (!activePath) {
+        view.setState(buildState("", "", handleDocChange));
+        return;
+      }
+      const tab = storeTabs.find((t) => t.path === activePath);
+      if (!tab) return;
+      view.setState(buildState(tab.content, tab.language, handleDocChange));
+    } finally {
+      suppressDocSync.current = false;
+    }
+  }, [activePath, activeTab?.language, handleDocChange]);
 
   function menuItems(path: string): MenuItem[] {
     return [
@@ -165,15 +205,31 @@ export function Editor(): JSX.Element {
       </div>
       <div className="editor-body">
         <div className="cm-host" ref={hostRef} />
-        {!active && (
+        {tabs.length === 0 && !rootPath && (
           <div className="editor-empty">
+            <span className="welcome-icon" aria-hidden="true">
+              <FolderOpen size={40} strokeWidth={1.25} />
+            </span>
             <h1>Luna</h1>
-            <p>Open a folder to begin.</p>
+            <p className="welcome-lead">フォルダーを開いて開発を始めましょう</p>
+            <button
+              type="button"
+              className="btn btn--primary btn--lg welcome-open-btn"
+              onClick={() => void commands.execute("file.openFolder")}
+            >
+              <FolderOpen size={18} strokeWidth={1.75} />
+              フォルダーを開く
+            </button>
             <ul className="shortcut-list">
-              <li><kbd>Ctrl</kbd>+<kbd>O</kbd> Open folder</li>
-              <li><kbd>Ctrl</kbd>+<kbd>B</kbd> Toggle file tree</li>
-              <li><kbd>Ctrl</kbd>+<kbd>`</kbd> Toggle terminal</li>
+              <li><kbd>Ctrl</kbd>+<kbd>O</kbd> フォルダーを開く</li>
+              <li><kbd>Ctrl</kbd>+<kbd>B</kbd> ファイルツリー</li>
+              <li><kbd>Ctrl</kbd>+<kbd>`</kbd> ターミナル</li>
             </ul>
+          </div>
+        )}
+        {tabs.length === 0 && rootPath && (
+          <div className="editor-empty editor-empty--hint">
+            <p className="welcome-lead">左のファイルツリーからファイルを開いてください</p>
           </div>
         )}
       </div>

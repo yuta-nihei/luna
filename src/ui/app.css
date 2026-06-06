@@ -130,17 +130,40 @@
 .tree-error {
   color: var(--luna-danger);
 }
-.tree-open-btn {
-  margin: 6px 12px;
-  padding: 8px 10px;
-  border: 1px solid var(--luna-border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--luna-text);
-  cursor: pointer;
+.tree-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  text-align: center;
 }
-.tree-open-btn:hover {
-  background: var(--luna-hover);
+.tree-welcome-icon {
+  display: inline-flex;
+  color: var(--luna-text-muted);
+  opacity: 0.7;
+}
+.tree-welcome-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--luna-text);
+}
+.tree-welcome-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--luna-text-muted);
+}
+.tree-welcome-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.tree-welcome-hint {
+  font-size: 11px;
+  color: var(--luna-text-muted);
 }
 
 /* --- Editor (>=70% of screen, ui.md) -------------------------------------- */
@@ -216,6 +239,11 @@
 .cm-host .cm-editor {
   height: 100%;
 }
+.cm-host .emmet-abbreviation {
+  text-decoration: underline wavy;
+  text-decoration-color: color-mix(in srgb, var(--luna-accent) 55%, transparent);
+  text-underline-offset: 2px;
+}
 .editor-empty {
   position: absolute;
   inset: 0;
@@ -223,9 +251,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   color: var(--luna-text-muted);
   background: var(--luna-code);
+}
+.welcome-icon {
+  display: inline-flex;
+  color: var(--luna-accent);
+  opacity: 0.85;
+  margin-bottom: 4px;
 }
 .editor-empty h1 {
   margin: 0;
@@ -233,6 +267,26 @@
   font-weight: 300;
   letter-spacing: 0.04em;
   color: var(--luna-text);
+}
+.welcome-lead {
+  margin: 0;
+  font-size: 14px;
+  color: var(--luna-text-muted);
+}
+.welcome-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.editor-empty--hint {
+  background: transparent;
+  pointer-events: none;
+}
+.btn--lg {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
 }
 .shortcut-list {
   list-style: none;
@@ -399,7 +453,60 @@ kbd {
 
 /* --- Folder picker ------------------------------------------------------- */
 .fp-modal {
-  height: min(70vh, 560px);
+  width: min(640px, 94vw);
+  height: min(72vh, 600px);
+}
+.fp-head {
+  align-items: flex-start;
+  gap: 12px;
+}
+.fp-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.fp-subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: var(--luna-text-muted);
+}
+.fp-location {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--luna-border);
+  border-radius: 10px;
+  background: var(--luna-code);
+}
+.fp-location-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--luna-accent);
+}
+.fp-location-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.fp-location-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--luna-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fp-location-path {
+  font-family: var(--luna-font-code);
+  font-size: 11px;
+  color: var(--luna-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .fp-pathbar {
   display: flex;
@@ -407,6 +514,30 @@ kbd {
   gap: 8px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--luna-border);
+}
+.fp-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--luna-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--luna-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background var(--luna-anim), color var(--luna-anim);
+}
+.fp-nav-btn:hover:not(:disabled) {
+  background: var(--luna-hover);
+  color: var(--luna-text);
+}
+.fp-nav-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .fp-path {
   flex: 1;
@@ -431,6 +562,80 @@ kbd {
 }
 .fp-list:focus {
   outline: none;
+}
+.fp-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--luna-text-muted);
+}
+.fp-spinner {
+  animation: fp-spin 0.8s linear infinite;
+}
+@keyframes fp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.fp-error {
+  margin: 8px 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--luna-danger);
+  background: color-mix(in srgb, var(--luna-danger) 12%, transparent);
+}
+.fp-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 16px);
+  margin: 6px 8px 8px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--luna-accent) 35%, var(--luna-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--luna-accent) 8%, var(--luna-code));
+  color: var(--luna-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--luna-anim), border-color var(--luna-anim);
+}
+.fp-current:hover {
+  background: color-mix(in srgb, var(--luna-accent) 14%, var(--luna-code));
+  border-color: var(--luna-accent);
+}
+.fp-current-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--luna-accent);
+}
+.fp-current-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.fp-current-label {
+  font-size: 11px;
+  color: var(--luna-text-muted);
+}
+.fp-current-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fp-section-label {
+  padding: 4px 14px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--luna-text-muted);
+  text-transform: uppercase;
 }
 .fp-empty {
   padding: 10px 14px;
@@ -471,9 +676,15 @@ kbd {
   padding: 12px 16px;
   border-top: 1px solid var(--luna-border);
 }
-.fp-hint {
+.fp-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   font-size: 11px;
   color: var(--luna-text-muted);
+}
+.fp-hints kbd {
+  margin-right: 2px;
 }
 .fp-actions {
   display: flex;
