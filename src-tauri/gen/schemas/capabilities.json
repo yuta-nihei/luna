@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Capabilities for the Luna main window. The Core sidecar is spawned from Rust, so the frontend only needs the dialog plugin plus core defaults; all Core access flows through the custom core_request command.","local":true,"windows":["main"],"permissions":["core:default","dialog:default"]}}

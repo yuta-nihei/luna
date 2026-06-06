@@ -1,0 +1,20 @@
+# Node / frontend
+node_modules/
+dist/
+*.local
+.vite/
+
+# Rust / Tauri
+src-tauri/target/
+# Sidecar binaries are build artifacts produced from backend/
+src-tauri/binaries/luna-core*
+
+# Go
+backend/bin/
+
+# Editor / OS
+.DS_Store
+*.log
+
+# Luna user config (never commit user state)
+.luna/
