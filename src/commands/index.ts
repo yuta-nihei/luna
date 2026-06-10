@@ -29,6 +29,7 @@ import { urlService } from "@/services/urlService";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useFileTreeStore } from "@/store/fileTreeStore";
 import { useUiStore } from "@/store/uiStore";
+import { useLayoutStore } from "@/store/layoutStore";
 import { useTerminalStore } from "@/store/terminalStore";
 import { commands } from "./registry";
 
@@ -339,6 +340,12 @@ commands.register({
   id: "view.toggleFileTree",
   title: "Toggle File Tree",
   run: () => useUiStore.getState().toggleFileTree(),
+});
+
+commands.register({
+  id: "view.togglePaletteExpanded",
+  title: "Toggle Left Palette Expanded",
+  run: () => useLayoutStore.getState().togglePaletteExpanded(),
 });
 
 // --- Emmet ------------------------------------------------------------------

@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, Folder, FolderOpen, Home, Loader2, X } from "lucide-react";
 import type { FileEntry } from "@/types";
 import { basename, dirname } from "@/core/path";
+import {
+  buildCompletedPath,
+  filterDirCandidates,
+  parseCompletionContext,
+} from "@/core/pathCompletion";
 import { fsService } from "@/services/fsService";
 import { commands } from "@/commands";
 import { useUiStore } from "@/store/uiStore";
@@ -21,12 +26,24 @@ export function FolderPicker(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [suggestions, setSuggestions] = useState<FileEntry[]>([]);
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
 
   const listRef = useRef<HTMLDivElement | null>(null);
+  const pathInputRef = useRef<HTMLInputElement | null>(null);
+  const pathInputFocusedRef = useRef(false);
+
+  function closeSuggestions(): void {
+    setSuggestions([]);
+    setSuggestionIndex(0);
+    setSuggestionsOpen(false);
+  }
 
   async function navigateTo(path: string): Promise<void> {
     const target = path.trim();
     if (!target) return;
+    closeSuggestions();
     setLoading(true);
     setError(null);
     try {
@@ -46,6 +63,63 @@ export function FolderPicker(): JSX.Element {
     }
   }
 
+  const fetchCandidates = useCallback(
+    async (value: string): Promise<FileEntry[]> => {
+      const ctx = parseCompletionContext(value, cwd);
+      if (!ctx) return [];
+
+      let source: FileEntry[];
+      if (ctx.baseDir === cwd) {
+        source = dirs;
+      } else {
+        try {
+          const entries = await fsService.listDir(ctx.baseDir);
+          source = entries.filter((e) => e.isDir);
+        } catch {
+          return [];
+        }
+      }
+
+      return filterDirCandidates(source, ctx.prefix);
+    },
+    [cwd, dirs],
+  );
+
+  function setCompletedDraft(name: string, baseDir: string): void {
+    setDraft(buildCompletedPath(baseDir, name));
+    pathInputRef.current?.focus();
+  }
+
+  function applyCompletion(name: string, baseDir: string): void {
+    setCompletedDraft(name, baseDir);
+    closeSuggestions();
+  }
+
+  async function onPathTab(value: string): Promise<void> {
+    const ctx = parseCompletionContext(value, cwd);
+    if (!ctx) return;
+
+    const matches =
+      suggestionsOpen && suggestions.length > 0 ? suggestions : await fetchCandidates(value);
+    if (matches.length === 0) return;
+
+    if (matches.length === 1) {
+      applyCompletion(matches[0]!.name, ctx.baseDir);
+      return;
+    }
+
+    if (!suggestionsOpen) {
+      setSuggestions(matches);
+      setSuggestionIndex(0);
+      setSuggestionsOpen(true);
+      return;
+    }
+
+    const next = (suggestionIndex + 1) % matches.length;
+    setSuggestionIndex(next);
+    setCompletedDraft(matches[next]!.name, ctx.baseDir);
+  }
+
   // Start at the open workspace root, falling back to the home directory.
   useEffect(() => {
     void (async () => {
@@ -60,7 +134,7 @@ export function FolderPicker(): JSX.Element {
 
   // Move focus to the list after each navigation so arrow keys work immediately.
   useEffect(() => {
-    if (!loading) listRef.current?.focus();
+    if (!loading && !pathInputFocusedRef.current) listRef.current?.focus();
   }, [cwd, loading]);
 
   // Keep the selected row in view.
@@ -102,26 +176,79 @@ export function FolderPicker(): JSX.Element {
         e.preventDefault();
         goUp();
         break;
+      case " ":
+        e.preventDefault();
+        if (dirs[selected]) void navigateTo(dirs[selected]!.path);
+        else choose();
+        break;
       case "Enter":
         e.preventDefault();
-        // Ctrl/Cmd+Enter opens the current folder; plain Enter steps into the selection.
         if (e.ctrlKey || e.metaKey) choose();
-        else if (dirs[selected]) void navigateTo(dirs[selected]!.path);
-        else choose();
         break;
       default:
         break;
     }
   }
 
+  async function onPathKeyDown(e: React.KeyboardEvent<HTMLInputElement>): Promise<void> {
+    e.stopPropagation();
+
+    if (e.key === "Tab") {
+      e.preventDefault();
+      await onPathTab(draft);
+      return;
+    }
+
+    if (suggestionsOpen) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSuggestionIndex((i) => Math.min(suggestions.length - 1, i + 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSuggestionIndex((i) => Math.max(0, i - 1));
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeSuggestions();
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const ctx = parseCompletionContext(draft, cwd);
+        const match = suggestions[suggestionIndex];
+        if (ctx && match) {
+          const completed = buildCompletedPath(ctx.baseDir, match.name);
+          setDraft(completed);
+          closeSuggestions();
+          await navigateTo(completed);
+        }
+        return;
+      }
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      await navigateTo(draft);
+      return;
+    }
+
+    if (e.key === "Escape") {
+      setDraft(cwd ?? "");
+      closeSuggestions();
+    }
+  }
+
   // Esc closes the picker (unless the path field is mid-edit; that's handled there).
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") close(false);
+      if (e.key === "Escape" && !suggestionsOpen) close(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [close]);
+  }, [close, suggestionsOpen]);
 
   const folderName = cwd ? basename(cwd) : "";
 
@@ -171,19 +298,63 @@ export function FolderPicker(): JSX.Element {
             <Home size={15} strokeWidth={1.75} />
             <span>ホーム</span>
           </button>
-          <input
-            className="fp-path"
-            value={draft}
-            spellCheck={false}
-            placeholder="パスを入力して Enter"
-            aria-label="フォルダーパス"
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              if (e.key === "Enter") void navigateTo(draft);
-              else if (e.key === "Escape") setDraft(cwd ?? "");
-            }}
-          />
+          <div className="fp-path-wrap">
+            <input
+              ref={pathInputRef}
+              className="fp-path"
+              value={draft}
+              spellCheck={false}
+              placeholder="パスを入力して Enter"
+              aria-label="フォルダーパス"
+              aria-expanded={suggestionsOpen}
+              aria-autocomplete="list"
+              aria-controls={suggestionsOpen ? "fp-suggest-list" : undefined}
+              aria-activedescendant={
+                suggestionsOpen && suggestions[suggestionIndex]
+                  ? `fp-suggest-${suggestionIndex}`
+                  : undefined
+              }
+              onFocus={() => {
+                pathInputFocusedRef.current = true;
+              }}
+              onBlur={() => {
+                pathInputFocusedRef.current = false;
+              }}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                closeSuggestions();
+              }}
+              onKeyDown={(e) => {
+                void onPathKeyDown(e);
+              }}
+            />
+            {suggestionsOpen && suggestions.length > 0 && (
+              <ul
+                id="fp-suggest-list"
+                className="fp-suggest"
+                role="listbox"
+                aria-label="フォルダー候補"
+              >
+                {suggestions.map((dir, idx) => (
+                  <li
+                    key={dir.path}
+                    id={`fp-suggest-${idx}`}
+                    role="option"
+                    aria-selected={idx === suggestionIndex}
+                    className={`fp-suggest-item${idx === suggestionIndex ? " fp-suggest-item--active" : ""}`}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      const ctx = parseCompletionContext(draft, cwd);
+                      if (ctx) applyCompletion(dir.name, ctx.baseDir);
+                    }}
+                  >
+                    <Folder size={14} strokeWidth={1.75} />
+                    <span>{dir.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
         <div className="fp-list" ref={listRef} tabIndex={0} onKeyDown={onListKeyDown}>
@@ -237,16 +408,17 @@ export function FolderPicker(): JSX.Element {
 
         <footer className="fp-foot">
           <div className="fp-hints">
-            <span><kbd>Enter</kbd> フォルダーに入る</span>
+            <span><kbd>Tab</kbd> 候補</span>
+            <span><kbd>Space</kbd> フォルダーに入る</span>
             <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd> ここで開く</span>
             <span><kbd>Esc</kbd> 閉じる</span>
           </div>
           <div className="fp-actions">
-            <button type="button" className="btn" onClick={() => close(false)}>
+            <button type="button" className="btn btn--lg" onClick={() => close(false)}>
               キャンセル
             </button>
-            <button type="button" className="btn btn--primary" disabled={!cwd || loading} onClick={choose}>
-              <FolderOpen size={15} strokeWidth={1.75} />
+            <button type="button" className="btn btn--primary btn--lg" disabled={!cwd || loading} onClick={choose}>
+              <FolderOpen size={18} strokeWidth={1.75} />
               開く
             </button>
           </div>

@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { commands } from "@/commands";
+import { useLayoutStore } from "@/store/layoutStore";
 import { usePaletteStore } from "@/store/paletteStore";
 import { useUiStore } from "@/store/uiStore";
 import { LeftPalette } from "./LeftPalette";
@@ -10,6 +11,7 @@ import { FolderPicker } from "./FolderPicker";
 import { FileTree } from "./FileTree";
 import { Editor } from "./Editor";
 import { TerminalPanel } from "./TerminalPanel";
+import { ResizeHandle } from "./ResizeHandle";
 
 export function AppShell(): JSX.Element {
   const loadPalette = usePaletteStore((s) => s.load);
@@ -17,6 +19,12 @@ export function AppShell(): JSX.Element {
   const terminalOpen = useUiStore((s) => s.terminalOpen);
   const paletteManagerOpen = useUiStore((s) => s.paletteManagerOpen);
   const folderPickerOpen = useUiStore((s) => s.folderPickerOpen);
+  const fileTreeWidth = useLayoutStore((s) => s.fileTreeWidth);
+  const terminalRatio = useLayoutStore((s) => s.terminalRatio);
+  const adjustFileTreeWidth = useLayoutStore((s) => s.adjustFileTreeWidth);
+  const adjustTerminalRatio = useLayoutStore((s) => s.adjustTerminalRatio);
+  const resetLayout = useLayoutStore((s) => s.resetLayout);
+  const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void loadPalette();
@@ -78,12 +86,44 @@ export function AppShell(): JSX.Element {
   return (
     <div className="app">
       <LeftPalette />
-      <div className="main">
+      <div className="main" ref={mainRef}>
         <div className="work-area">
-          {fileTreeOpen && <FileTree />}
+          {fileTreeOpen && (
+            <>
+              <FileTree
+                style={{
+                  width: fileTreeWidth,
+                  flex: `0 0 ${fileTreeWidth}px`,
+                }}
+              />
+              <ResizeHandle
+                orientation="vertical"
+                label="Resize file tree"
+                onResize={adjustFileTreeWidth}
+                onDoubleClick={resetLayout}
+              />
+            </>
+          )}
           <Editor />
         </div>
-        {terminalOpen && <TerminalPanel />}
+        {terminalOpen && (
+          <>
+            <ResizeHandle
+              orientation="horizontal"
+              label="Resize terminal"
+              onResize={(delta) => {
+                const mainHeight = mainRef.current?.clientHeight ?? 0;
+                adjustTerminalRatio(delta, mainHeight);
+              }}
+              onDoubleClick={resetLayout}
+            />
+            <TerminalPanel
+              style={{
+                flex: `0 0 ${terminalRatio * 100}%`,
+              }}
+            />
+          </>
+        )}
       </div>
       {paletteManagerOpen && <PaletteManager />}
       {folderPickerOpen && <FolderPicker />}
