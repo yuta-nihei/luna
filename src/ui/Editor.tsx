@@ -208,7 +208,7 @@ export function Editor(): JSX.Element {
         {tabs.length === 0 && !rootPath && (
           <div className="editor-empty">
             <span className="welcome-icon" aria-hidden="true">
-              <FolderOpen size={40} strokeWidth={1.25} />
+              <img src="/images/luna-icon-macos.png" alt="" className="luna-brand-icon luna-brand-icon--lg" />
             </span>
             <h1>Luna</h1>
             <p className="welcome-lead">フォルダーを開いて開発を始めましょう</p>
