@@ -93,7 +93,7 @@ function InlineInput({
   );
 }
 
-export function FileTree(): JSX.Element {
+export function FileTree({ style }: { style?: React.CSSProperties }): JSX.Element {
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const roots = useFileTreeStore((s) => s.roots);
   const nodes = useFileTreeStore((s) => s.nodes);
@@ -196,7 +196,7 @@ export function FileTree(): JSX.Element {
 
   if (!rootPath) {
     return (
-      <aside className="file-tree">
+      <aside className="file-tree" style={style}>
         <div className="panel-header">Explorer</div>
         <div className="tree-welcome">
           <span className="tree-welcome-icon" aria-hidden="true">
@@ -299,7 +299,7 @@ export function FileTree(): JSX.Element {
   }
 
   return (
-    <aside className="file-tree">
+    <aside className="file-tree" style={style}>
       <div className="panel-header tree-header">
         <span className="tree-header-name" title={rootPath}>
           {basename(rootPath)}

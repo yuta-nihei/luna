@@ -5,7 +5,7 @@ import { useUiStore } from "@/store/uiStore";
 
 // Bottom output panel. In this slice it shows the captured output of one-shot
 // palette/command runs; an interactive PTY terminal is a later slice.
-export function TerminalPanel(): JSX.Element {
+export function TerminalPanel({ style }: { style?: React.CSSProperties }): JSX.Element {
   const blocks = useTerminalStore((s) => s.blocks);
   const clear = useTerminalStore((s) => s.clear);
   const setTerminalOpen = useUiStore((s) => s.setTerminalOpen);
@@ -17,7 +17,7 @@ export function TerminalPanel(): JSX.Element {
   }, [blocks]);
 
   return (
-    <section className="terminal-panel" aria-label="Terminal output">
+    <section className="terminal-panel" style={style} aria-label="Terminal output">
       <header className="terminal-header">
         <span className="terminal-title">TERMINAL</span>
         <div className="terminal-actions">
