@@ -200,7 +200,7 @@ export function FileTree({ style }: { style?: React.CSSProperties }): JSX.Elemen
         <div className="panel-header">Explorer</div>
         <div className="tree-welcome">
           <span className="tree-welcome-icon" aria-hidden="true">
-            <Folder size={28} strokeWidth={1.25} />
+            <img src="/images/luna-icon-macos.png" alt="" className="luna-brand-icon" />
           </span>
           <p className="tree-welcome-title">フォルダーが開かれていません</p>
           <p className="tree-welcome-desc">プロジェクトフォルダーを選ぶと、ここにファイル一覧が表示されます。</p>

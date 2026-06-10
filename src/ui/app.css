@@ -177,8 +177,18 @@
 }
 .tree-welcome-icon {
   display: inline-flex;
-  color: var(--luna-text-muted);
-  opacity: 0.7;
+}
+.luna-brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: block;
+  opacity: 0.9;
+}
+.luna-brand-icon--lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
 }
 .tree-welcome-title {
   margin: 0;
@@ -294,8 +304,6 @@
 }
 .welcome-icon {
   display: inline-flex;
-  color: var(--luna-accent);
-  opacity: 0.85;
   margin-bottom: 4px;
 }
 .editor-empty h1 {
